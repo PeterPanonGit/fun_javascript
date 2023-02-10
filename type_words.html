@@ -1,0 +1,185 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head><title>Type words</title></head>
+  <body>
+    <!-- Game canvas -->
+    <canvas id="canvas" width="800" height="600"></canvas>    
+    <!-- Javascript game logic -->
+    <script>
+      
+      // Defines a general class used to specify game objects.
+      class GameObject {
+        constructor(x, y, width, height, color) {
+          // Define the object's position
+          this.x = x;
+          this.y = y;
+
+          // Define the object's size
+          this.width = width;
+          this.height = height;
+
+          // Define the object's color
+          this.color = color;
+        }
+
+        // Draw the object on the canvas
+        draw(ctx) {
+          ctx.fillStyle = this.color;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+
+        // Update the object's position
+        update(dx, dy) {
+          this.x += dx;
+          this.y += dy;
+        }
+
+        // Check if the object is colliding with another object
+        collidesWith(obj) {
+          return (this.x < obj.x + obj.width
+               && this.x + this.width > obj.x
+               && this.y < obj.y + obj.height 
+               && this.y + this.height > obj.y);
+        }
+      }
+
+      class Word extends GameObject {
+        constructor(x,  y, width, height, color, text, dy, time_created) {
+            super(x, y, width, height, color);
+            this.text = text;
+            this.dy = dy;
+            this.time_created = time_created;
+        }
+
+        draw(ctx) {
+            ctx.fillStyle = this.color
+            ctx.font = "30px Arial"
+            ctx.fillText(this.text, this.x, this.y);
+            const img = new Image();
+            img.src = "https://toppng.com/uploads/preview/meteor-png-asteroid-clipart-1156293366285wkddbwxk.png";
+            ctx.drawImage(img, this.x, this.y+5, 50, 50);
+        }
+
+        update() {
+            this.y += this.dy;
+        }
+      }
+
+      class Player {
+        constructor(textbox) {
+            this.textbox = textbox;
+            this.spaceship_img = 'https://cdn.pixabay.com/photo/2013/07/12/13/52/rocket-147466_960_720.png';
+            this.matched_word = new Word(0, 0, 0, 0, '#FFFFFF', 'NONE', 0, Date.now());
+        }
+
+        draw(ctx, defaultX, defaultY) {
+            const img = new Image();
+            img.src = this.spaceship_img;
+            ctx.drawImage(img, defaultX, defaultY, 50, 50);
+            if (this.matched_word.text == 'NONE') {
+                ctx.drawImage(img, defaultX, defaultY, 50, 50);
+            } else {
+                ctx.drawImage(img, this.matched_word.x, defaultY, 50, 50);
+                this.matched_word = (0, 0, 0, 0, '#FFFFFF', 'NONE', 0, Date.now());
+            }
+        }
+
+        check_match(words) {
+            for (var i = 0; i < words.length; i++) {
+                if (this.textbox.value == words[i].text) {
+                    this.matched_word = words[i];
+                    words.splice(i, 1);
+                    this.textbox.value = '';
+                    return;
+                }
+            }
+            this.textbox.value = '';
+        }
+      }
+
+      // Defines an empty object used to specify game properties and behavior.
+      var game = {};
+      
+      // Define canvas and context
+      game.canvas = document.getElementById('canvas');
+      game.ctx = game.canvas.getContext('2d');
+      
+      // Define background color
+      game.backgroundColor = '#FFFFFF';
+
+      // Create player
+      var textBox = document.createElement('input');
+      textBox.type = 'text';
+      textBox.style.position = 'absolute';
+      textBox.style.left = '50%';
+      textBox.style.top = '95%';
+      textBox.style.transform = 'translate(-50%, -50%)';
+      textBox.style.backgroundColor = 'black';
+      document.body.appendChild(textBox);
+      game.player = new Player(textBox);
+
+      // Defines a function to handle the game loop
+      game.update = function() {
+        // Draw canvas background
+        game.ctx.fillStyle = game.backgroundColor;
+        game.ctx.fillRect(0, 0, game.canvas.width, game.canvas.height);
+        vocabulary = ['are', 'easy', 'listen', 'second', 'make', 'enough', 'about', 'float', 'found', 'usually', 'another', 'first', 'many', 'said', 'girl', 'won', 'thank', 'won’t', 'quit', 'don’t', 'drink', 'low', 'kicked', 'why', 'tell', 'children', 'really', 'then', 'into', 'pretty', 'idea', 'piece', 'clock', 'answer', 'they', 'eating', 'since', 'thing', 'right', 'more', 'sometimes', 'sister', 'friends', 'favorite', 'too', 'small', 'because', 'joke', 'jump', 'question', 'line', 'their', 'young', 'city'];
+        if (game.words.length < 10 && ((game.words.length == 0) || (Date.now() - game.words[game.words.length-1].time_created > 3000))) {
+            var text = vocabulary[Math.floor(Math.random() * vocabulary.length)];
+            var color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+            var width = text.length * 20;
+            var x = Math.min(Math.floor(Math.random() * game.canvas.width), game.canvas.width - (2*width));
+            var word = new Word(x, 0, width, 50, color, text, 1, Date.now());
+            game.words.push(word);
+        }
+      
+        // update words
+        for (var i = 0; i < game.words.length; i++) {
+            game.words[i].draw(game.ctx);
+            game.words[i].update();
+        }
+        // if any word is out of canvas, remove it
+        for (var i = 0; i < game.words.length; i++) {
+            if ((game.words[i].y > game.canvas.height) || (game.words[i].y < 0)) {
+                game.words.splice(i, 1);
+            }
+        }
+
+        // update player's spaceship
+        game.player.draw(game.ctx, game.canvas.width/2, game.canvas.height*0.8);
+      }
+
+      // Defines a function to handle key events
+      game.keydown = function(e) {
+        if (event.keyCode == 13) {
+            game.player.check_match(game.words);
+        }
+      }      
+      
+      // Defines a function to start the game loop
+      game.init = function() {
+        // Set the game loop
+        game.interval = setInterval(game.update, 1000 / 60);
+        game.words = [];
+      }
+
+      // Defines a function to stop the game loop
+      game.stop = function() {
+        clearInterval(game.interval);
+      }
+      
+      // Defines a function to restart the game
+      game.restart = function() {
+        game.stop();
+        game.init();
+      }
+      
+      // Start the game on window load
+      window.onload = game.init;
+
+      // Detect key events
+      window.onkeydown = game.keydown;
+    </script>
+  </body>
+</html>
