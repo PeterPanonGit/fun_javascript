@@ -150,6 +150,9 @@
         game.ctx.fillText('craters: ' + String(game.craters.length), 20, 50);
         var time_elapsed = Math.floor((Date.now() - game.start_time)/1000);
         game.ctx.fillText('time left: ' + String(game.total_time - time_elapsed), game.canvas.width/2 - 100, 50);
+        if (time_elapsed >= game.total_time) {
+          game.stop();
+        }
       }
 
       // Defines a function to handle key events
