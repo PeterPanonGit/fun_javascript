@@ -9,11 +9,9 @@
     <script>
 
       class Word {
-        constructor(x,  y, width, height, color, text, dy, time_created) {
+        constructor(x,  y, color, text, dy, time_created) {
             this.x = x;
             this.y = y;
-            this.width = width;
-            this.height = height;
             this.color = color;
             this.text = text;
             this.dy = dy;
@@ -34,6 +32,19 @@
         }
       }
 
+      class Crater {
+        constructor(x,  y) {
+          this.x = x;
+          this.y = y;
+        }
+
+        draw(ctx) {
+          const img = new Image();
+          img.src = "https://craterexplorer.ca/wp-content/uploads/2017/02/Odale-barringer-06_barringer_crater_south.jpg";
+          ctx.drawImage(img, this.x, this.y+5, 50, 50);
+        }
+      }
+
       class Player {
         constructor(textbox) {
             this.textbox = textbox;
@@ -41,6 +52,7 @@
             this.rocket.src = 'https://cdn.pixabay.com/photo/2013/07/12/13/52/rocket-147466_960_720.png';
             this.matched_y = -1;
             this.matched_time = Date.now();
+            this.score = 0;
           }
 
         check_match(words) {
@@ -51,6 +63,7 @@
                     words.splice(i, 1);
                     this.textbox.value = '';
                     this.matched_time = Date.now();
+                    this.score += 1;
                     return;
                 }
             }
@@ -77,7 +90,7 @@
       textBox.style.left = '50%';
       textBox.style.top = '95%';
       textBox.style.transform = 'translate(-50%, -50%)';
-      textBox.style.backgroundColor = 'black';
+      textBox.style.backgroundColor = 'grey';
       document.body.appendChild(textBox);
       game.player = new Player(textBox);
       game.player.rocket_x = game.canvas.width/2;
@@ -85,15 +98,18 @@
       // Defines a function to handle the game loop
       game.update = function() {
         // Draw canvas background
-        game.ctx.fillStyle = game.backgroundColor;
-        game.ctx.fillRect(0, 0, game.canvas.width, game.canvas.height);
-        vocabulary = ['are', 'easy', 'listen', 'second', 'make', 'enough', 'about', 'float', 'found', 'usually', 'another', 'first', 'many', 'said', 'girl', 'won', 'thank', 'won’t', 'quit', 'don’t', 'drink', 'low', 'kicked', 'why', 'tell', 'children', 'really', 'then', 'into', 'pretty', 'idea', 'piece', 'clock', 'answer', 'they', 'eating', 'since', 'thing', 'right', 'more', 'sometimes', 'sister', 'friends', 'favorite', 'too', 'small', 'because', 'joke', 'jump', 'question', 'line', 'their', 'young', 'city'];
+        var img = new Image();
+        img.src = "https://media.istockphoto.com/id/1271122894/photo/planet-earth-from-the-space-at-night.jpg?s=612x612&w=0&k=20&c=PU-_OdSqlMs47X3FKQQBEruZcI38QJ4XLPpYi9b7dJ4=";
+        game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
+        game.ctx.drawImage(img, 0, 0, game.canvas.width, game.canvas.height);
+
+        vocabulary = ['calf', 'claw', 'couple', 'cushion', 'flap', 'groom', 'share', 'shelter', 'yard', 'zero'];
         if (game.words.length < 10 && ((game.words.length == 0) || (Date.now() - game.words[game.words.length-1].time_created > 3000))) {
             var text = vocabulary[Math.floor(Math.random() * vocabulary.length)];
             var color = 'rgb(' + Math.floor((Math.random() + 0.1) * 255) + ',' + Math.floor((Math.random() + 0.1) * 255) + ',' + Math.floor((Math.random() + 0.1) * 255) + ')';
             var width = text.length * 20;
             var x = Math.min(Math.floor(Math.random() * game.canvas.width), game.canvas.width - (2*width));
-            var word = new Word(x, 0, width, 50, color, text, 1, Date.now());
+            var word = new Word(x, 0, color, text, 1, Date.now());
             game.words.push(word);
         }
       
@@ -102,13 +118,21 @@
             game.words[i].draw(game.ctx);
             game.words[i].update();
         }
+
+        // update craters
+        for (var i = 0; i < game.craters.length; i++) {
+          game.craters[i].draw(game.ctx);
+        }
+
         // if any word is out of canvas, remove it
         for (var i = 0; i < game.words.length; i++) {
-            if ((game.words[i].y > game.canvas.height) || (game.words[i].y < 0)) {
+            if ((game.words[i].y > game.canvas.height)) {
+                game.craters.push(new Crater(game.words[i].x, game.words[i].y - 50));
                 game.words.splice(i, 1);
             }
         }
 
+        // update player
         game.ctx.drawImage(game.player.rocket, game.player.rocket_x, game.canvas.height*0.8, 40, 40)
         if (game.player.matched_y > 0) {
           game.ctx.fillStyle = '#E80B08';
@@ -120,6 +144,12 @@
         if ((game.player.matched_y > 0) && (Date.now() - game.player.matched_time > 500)) {
           game.player.matched_y = -1;
         }
+        game.ctx.fillStyle = 'red';
+        game.ctx.font = "30px Arial"
+        game.ctx.fillText('score: ' + String(game.player.score), game.canvas.width-150, 50);
+        game.ctx.fillText('craters: ' + String(game.craters.length), 20, 50);
+        var time_elapsed = Math.floor((Date.now() - game.start_time)/1000);
+        game.ctx.fillText('time left: ' + String(game.total_time - time_elapsed), game.canvas.width/2 - 100, 50);
       }
 
       // Defines a function to handle key events
@@ -134,6 +164,9 @@
         // Set the game loop
         game.interval = setInterval(game.update, 20);
         game.words = [];
+        game.craters = [];
+        game.start_time = Date.now();
+        game.total_time = 3 * 60;
       }
 
       // Defines a function to stop the game loop
