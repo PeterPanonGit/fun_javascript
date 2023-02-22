@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Canvas Game</title>
+  </head>
+  <body>
+    <canvas id="canvas" width="1200" height="500"></canvas>
+    <script>
+// Define the classes for Mario, Goomba, and TreasureBox
+class Mario {
+  constructor() {
+    this.width = 50; // Mario's width
+    this.height = 50; // Mario's height
+    this.x = 0; // Mario's starting x position
+    this.y = canvas.height - this.height; // Mario's starting y position
+    this.vx = 0; // Mario's x velocity
+    this.vy = 0; // Mario's y velocity
+    this.img = new Image();
+    this.img.src = "https://cdn.shopify.com/s/files/1/0568/2298/8958/products/Sanei-Trading-Super-Mario-Figure-Collection-Mario-01-Fcm001-Japan-Figure-4905330533401-0_938x938.jpg?v=1657242893";
+  }
+
+  // Method for Mario to jump
+  jump() {
+    this.vy = -10;
+  }
+
+  // Method for Mario to move left
+  moveLeft() {
+    this.vx = -5;
+  }
+
+  // Method for Mario to move right
+  moveRight() {
+    this.vx = 5;
+  }
+
+  // Method to update Mario's position and velocity
+  update() {
+    // Update Mario's position based on velocity
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Apply gravity to Mario's velocity
+    this.vy += 0.5;
+
+    // Limit Mario's velocity
+    if (this.vx > 5) {
+      this.vx = 5;
+    } else if (this.vx < -5) {
+      this.vx = -5;
+    }
+
+    // Limit Mario's position to within the canvas
+    if (this.x < 0) {
+      this.x = 0;
+    } else if (this.x > canvas.width - this.width) {
+      this.x = canvas.width - this.width;
+    }
+
+    if (this.y < 0) {
+      this.y = 0;
+    } else if (this.y > canvas.height - this.height) {
+      this.y = canvas.height - this.height;
+      this.vx = 0;
+      this.vy = 0;
+    }
+    ctx.drawImage(this.img, this.x, this.y, this.width, this.height);
+  }
+
+  // Method to detect collision with Goomba or TreasureBox
+  detectCollision(object) {
+    // Check if Mario collides with the object
+    if (
+      this.x + this.width > object.x &&
+      this.x < object.x + object.width &&
+      this.y + this.height > object.y &&
+      this.y < object.y + object.height
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+}
+
+
+class Goomba {
+  constructor() {
+    this.width = 50; // Goomba's width
+    this.height = 50; // Goomba's height
+    this.x = canvas.width / 2; // Goomba's starting x position
+    this.y = canvas.height - this.height; // Goomba's starting y position
+    this.vx = 3; // Goomba's x velocity
+    this.img = new Image();
+    this.img.src = "https://static.wikia.nocookie.net/mariokart/images/0/09/GoombaNSMB.jpg/revision/latest?cb=20080728222842";
+    this.last_update_time = Date.now();
+  }
+
+  // Method for Goomba to move randomly left and right
+  move() {
+    // Change Goomba's velocity randomly
+    if (Date.now() - this.last_update_time > 1000) {
+        this.last_update_time = Date.now();
+        var v = Math.floor((0.5 + Math.random())*10);
+        if (Math.random() < 0.5) {
+        this.vx = -v;
+        } else {
+        this.vx = v;
+        }
+    }
+
+    // Update Goomba's position based on velocity
+    this.x += this.vx;
+
+    // Limit Goomba's position to within the canvas
+    if (this.x < 0) {
+      this.x = 0;
+    } else if (this.x > canvas.width - this.width) {
+      this.x = canvas.width - this.width;
+    }
+  }
+
+  // Method to update Goomba's position
+  update() {
+    this.move();
+    ctx.drawImage(this.img, this.x, this.y, this.width, this.height);
+  }
+}
+
+
+class TreasureBox {
+  constructor() {
+    this.width = 50; // Treasure box's width
+    this.height = 50; // Treasure box's height
+    this.x = canvas.width - this.width; // Treasure box's starting x position
+    this.y = canvas.height - this.height; // Treasure box's starting y position
+    this.img = new Image(); // Create a new image object
+    this.img.src = 'https://cdn.shopify.com/s/files/1/0595/8887/0335/products/images2_1024x1024@2x.jpg?v=1669389174';
+    // Set the image source
+  }
+
+  // Method to draw the treasure box
+  draw() {
+    // Draw the image
+    ctx.drawImage(this.img, this.x, this.y, this.width, this.height);
+  }
+}
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+// Create instances of Mario, Goomba, and TreasureBox
+const mario = new Mario(0, canvas.height-20);
+const goomba = new Goomba();
+const treasureBox = new TreasureBox();
+
+// Main game loop
+function gameLoop() {
+  // Update the positions of Mario and Goomba
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  mario.update();
+  goomba.update();
+  treasureBox.draw();
+
+  // Check for collisions between Mario and Goomba/TreasureBox
+  if (mario.detectCollision(goomba)) {
+    alert("You lost!");
+    return;
+  } else if (mario.detectCollision(treasureBox)) {
+    alert("You win!");
+    return;
+  }
+
+  // Repeat the game loop
+  requestAnimationFrame(gameLoop);
+}
+
+// Start the game loop
+gameLoop();
+
+// Add event listeners to the window object
+window.addEventListener("keydown", function (event) {
+  // Check if the space bar is pressed
+  if (event.code === "Space") {
+    // Make Mario jump
+    mario.jump();
+    // Check if the right arrow is also pressed
+    window.addEventListener("keydown", function (event) {
+      if (event.code === "ArrowRight") {
+        // Make Mario jump right
+        mario.moveRight();
+      } else if (event.code === "ArrowLeft") {
+        // Make Mario jump left
+        mario.moveLeft();
+      }
+    });
+  }
+});
+    </script>
+  </body>
+</html>
