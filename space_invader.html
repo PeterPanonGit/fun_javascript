@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head><title>Space Invader</title></head>
+  <body>
+    <!-- Game canvas -->
+    <canvas id="canvas" width="1000" height="700"></canvas>    
+    <!-- Javascript game logic -->
+    <script>
+
+class Game {
+  constructor() {
+    this.canvas = document.getElementById('canvas');
+    this.ctx = this.canvas.getContext('2d');
+
+    this.background = new Image();
+    this.background.src = "https://www.travelandleisure.com/thmb/sH4T0ElWwZFyUhtqAZD3USeiaSc=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/james-webb-hole-WEBB0722-a7b14258290d4da9be4c7d50ee732d9b.jpg";
+    this.background.onload = () => {
+      // Once the image has loaded, call the draw method to draw the image
+      this.draw();
+    };
+    this.spaceship = new Spaceship(this.ctx, this.canvas);
+    this.aliens = [];
+    for (var i = 0; i < 20; i++) {
+        const x = 50 + (Math.random() * (this.canvas.width - 100))
+        const y = 50 + (1/3 * this.canvas.height * Math.random());
+        this.aliens.push(new Alien(x, y, this.ctx, this.canvas));
+    }
+    this.bullets = [];
+    this.explosions = [];
+
+    this.score = 0;
+    this.isGameOver = false;
+
+    this.handleInput();
+  }
+
+  handleInput() {
+    document.addEventListener('keydown', (event) => {
+      switch (event.code) {
+        case 'ArrowLeft':
+          this.spaceship.moveLeft();
+          break;
+        case 'ArrowRight':
+          this.spaceship.moveRight();
+          break;
+        case 'Space':
+          this.spaceship.shoot();
+          break;
+      }
+    });
+  }
+
+  update() {
+    // update spaceship
+    this.spaceship.update();
+
+    // update aliens
+    this.aliens.forEach((alien) => {
+      alien.update();
+      if (Math.random() < 0.05) {
+        alien.shoot();
+      }
+    });
+
+    // update bullets
+    this.spaceship.bullets.forEach((bullet) => {
+      bullet.update();
+    });
+    for (var i = 0; i < this.spaceship.bullets.length; ++i) {
+        for (var a = 0; a < this.aliens.length; ++a) {
+            if ((!this.aliens[a].explosion_time) && (this.spaceship.bullets[i].detectCollision(this.aliens[a]))) {
+                this.spaceship.bullets[i].y = -100;
+                this.aliens[a].explode();
+            }
+        }
+        if (this.spaceship.bullets[i].y < 0) {
+          this.spaceship.bullets.splice(i, 1);
+        }
+    }
+
+
+    // check for game over
+    this.isGameOver = true;
+    for (var a = 0; a < this.aliens.length; ++a) {
+        if (!this.aliens[a].explosion_time) {
+            this.isGameOver = false;
+        }
+    }
+    if (this.isGameOver) {
+      this.endGame();
+    }
+  }
+
+  draw() {
+    // clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.drawImage(this.background, 0, 0, this.canvas.width, this.canvas.height);
+
+    // draw spaceship
+    this.spaceship.draw(this.ctx);
+
+    // draw aliens
+    this.aliens.forEach((alien) => {
+      alien.draw(this.ctx);
+    });
+
+    // draw bullets
+    this.spaceship.bullets.forEach((bullet) => {
+      bullet.draw(this.ctx);
+    });
+
+    // draw explosions
+    this.explosions.forEach((explosion) => {
+      explosion.draw(this.ctx);
+    });
+  }
+
+  loop() {
+    this.update();
+    this.draw();
+    if (!this.isGameOver) {
+      requestAnimationFrame(() => {
+        this.loop();
+      });
+    }
+  }
+
+  addAlien(alien) {
+    this.aliens.push(alien);
+  }
+
+  removeAlien(alien) {
+    const index = this.aliens.indexOf(alien);
+    if (index !== -1) {
+      this.aliens.splice(index, 1);
+    }
+  }
+
+  addBullet(bullet) {
+    this.bullets.push(bullet);
+    }
+
+    removeBullet(bullet) {
+    const index = this.bullets.indexOf(bullet);
+    if (index !== -1) {
+    this.bullets.splice(index, 1);
+    }
+    }
+
+    addExplosion(explosion) {
+    this.explosions.push(explosion);
+    }
+
+    removeExplosion(explosion) {
+    const index = this.explosions.indexOf(explosion);
+    if (index !== -1) {
+    this.explosions.splice(index, 1);
+    }
+    }
+
+    endGame() {
+    this.isGameOver = true;
+    alert("You defeated all the aliens!");
+    }
+}
+
+class Bullet {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.width = 10;
+    this.height = 30;
+    this.speed = 5;
+    this.color = '#ffffff';
+  }
+  
+  draw(ctx) {
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  }
+  
+  update() {
+    this.y -= this.speed;
+  }
+
+  // Method to detect collision with Goomba or TreasureBox
+  detectCollision(object) {
+    // Check if Mario collides with the object
+    if (
+      this.x + this.width > object.x &&
+      this.x < object.x + object.width &&
+      this.y + this.height > object.y &&
+      this.y < object.y + object.height
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+}
+
+class Alien {
+    constructor(x, y, ctx, canvas) {
+        this.ctx = ctx;
+        this.canvas = canvas;
+        this.x = x; 
+        this.y = y;
+        this.width = 30;
+        this.height = 30;
+        this.speed = (0.5 + Math.random()) * 5;
+        this.image = new Image();
+        this.image.src = "https://static.wikia.nocookie.net/unofficial-alphabet-lore/images/6/69/I.png/revision/latest?cb=20221023151307";
+        this.image.onload = () => {
+            this.draw();
+        }
+        this.explode_img = new Image();
+        this.explode_img.src = "https://illustoon.com/photo/1975.png";
+        this.explosion_time = null;
+    }
+
+    update() {
+        const scalex = 2 * (Math.random() - 0.5);
+        const newx = this.x + (scalex * this.speed);
+        if ((newx > 0) && (newx < this.canvas.width - 50)) {
+            this.x = newx;
+        }
+        const scaley = 2 * (Math.random() - 0.5);
+        const newy = this.y + (scaley * this.speed);
+        if ((newy > 50) && (newy < this.canvas.height / 2)) {
+            this.y = newy;
+        }
+    }
+
+    draw() {
+        if (this.explosion_time) {
+            if (Date.now() - this.explosion_time < 1000) {
+                this.ctx.drawImage(this.explode_img, this.x, this.y, this.width, this.height);
+            }
+        } else {
+            this.ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+        }
+    }
+
+    explode() {
+        this.explosion_time = Date.now();
+    }
+
+    shoot() {
+    }
+}
+
+class Spaceship {
+  constructor(ctx, canvas) {
+    this.ctx = ctx;
+    this.canvas = canvas;
+    this.x = this.canvas.width/2;
+    this.y = this.canvas.height-50;
+    this.width = 50;
+    this.height = 50;
+    this.speed = 5;
+    this.image = new Image();
+    this.image.src = "https://www.pngfind.com/pngs/m/31-313200_space-ship-clipart-rocket-ship-clipart-hd-png.png";
+    this.image.onload = () => {
+        this.draw();
+    }
+    this.isMovingLeft = false;
+    this.isMovingRight = false;
+    this.bullets = [];
+    this.last_shooting_time = Date.now();
+  }
+
+  moveLeft() {
+    this.isMovingLeft = true;
+    this.isMovingRight = false;
+  }
+
+  moveRight() {
+    this.isMovingRight = true;
+    this.isMovingLeft = false;
+  }
+
+  update() {
+    if ((this.isMovingLeft) && (this.x > 0)) {
+      this.x -= this.speed;
+    }
+    if ((this.isMovingRight) && (this.x < this.canvas.width - this.width)) {
+      this.x += this.speed;
+    }
+  }
+
+  draw() {
+    this.ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+  }
+
+  shoot() {
+    if (Date.now() - this.last_shooting_time > 500) {
+        const bullet = new Bullet(
+        this.x + this.width / 2 - 2.5,
+        this.y - this.height / 2,
+        );
+        this.bullets.push(bullet);
+        this.last_shooting_time = Date.now();
+    }
+  }
+
+}
+
+const game = new Game();
+game.loop();
+
+
+    </script>
+  </body>
+</html>
